@@ -60,6 +60,7 @@ pub struct Profile {
     pub is_click_to_pay_enabled: bool,
     pub authentication_product_ids:
         Option<common_types::payments::AuthenticationConnectorAccountMap>,
+    pub is_tokenize_before_payment_enabled: bool,
 }
 
 #[cfg(feature = "v1")]
@@ -106,6 +107,7 @@ pub struct ProfileNew {
     pub is_click_to_pay_enabled: bool,
     pub authentication_product_ids:
         Option<common_types::payments::AuthenticationConnectorAccountMap>,
+    pub is_tokenize_before_payment_enabled: Option<bool>,
 }
 
 #[cfg(feature = "v1")]
@@ -149,6 +151,7 @@ pub struct ProfileUpdateInternal {
     pub is_click_to_pay_enabled: Option<bool>,
     pub authentication_product_ids:
         Option<common_types::payments::AuthenticationConnectorAccountMap>,
+    pub is_tokenize_before_payment_enabled: Option<bool>,
 }
 
 #[cfg(feature = "v1")]
@@ -190,6 +193,7 @@ impl ProfileUpdateInternal {
             max_auto_retries_enabled,
             is_click_to_pay_enabled,
             authentication_product_ids,
+            is_tokenize_before_payment_enabled,
         } = self;
         Profile {
             profile_id: source.profile_id,
@@ -253,6 +257,8 @@ impl ProfileUpdateInternal {
                 .unwrap_or(source.is_click_to_pay_enabled),
             authentication_product_ids: authentication_product_ids
                 .or(source.authentication_product_ids),
+            is_tokenize_before_payment_enabled: is_tokenize_before_payment_enabled
+                .unwrap_or(source.is_tokenize_before_payment_enabled),
         }
     }
 }
