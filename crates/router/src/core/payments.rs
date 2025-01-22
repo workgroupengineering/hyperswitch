@@ -5078,8 +5078,7 @@ impl From<network_tokenization::TokenResponse> for domain::NetworkTokenData {
 pub async fn set_payment_method_data_for_pre_network_tokenization<F, D>(
     state: &SessionState,
     payment_data: &mut D,
-)
-where
+) where
     F: Send + Clone,
     D: OperationSessionGetters<F> + OperationSessionSetters<F> + Send + Sync + Clone,
 {
@@ -5103,9 +5102,9 @@ where
                     network_token: network_token_data_for_vault.clone(),
                 };
                 payment_data.set_vault_operation(
-                    PaymentMethodDataAction::SaveCardAndNetworkTokenData(
-                        Box::new(card_and_network_token_data.clone()),
-                    ),
+                    PaymentMethodDataAction::SaveCardAndNetworkTokenData(Box::new(
+                        card_and_network_token_data.clone(),
+                    )),
                 );
 
                 payment_data.set_payment_method_data(Some(
@@ -5117,18 +5116,18 @@ where
                     card_data: card_data.clone(),
                     network_token_req_ref_id: Some(token_ref),
                 };
-                payment_data.set_vault_operation(PaymentMethodDataAction::SaveCardData(
-                    Box::new(card_data_for_vault.clone()),
-                ))
+                payment_data.set_vault_operation(PaymentMethodDataAction::SaveCardData(Box::new(
+                    card_data_for_vault.clone(),
+                )))
             }
             _ => {
                 let card_data_for_vault = CardDataForVault {
                     card_data: card_data.clone(),
                     network_token_req_ref_id: None,
                 };
-                payment_data.set_vault_operation(PaymentMethodDataAction::SaveCardData(
-                    Box::new(card_data_for_vault.clone()),
-                ))
+                payment_data.set_vault_operation(PaymentMethodDataAction::SaveCardData(Box::new(
+                    card_data_for_vault.clone(),
+                )))
             }
         }
     }

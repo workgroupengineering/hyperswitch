@@ -538,7 +538,7 @@ impl ProfileUpdateInternal {
             authentication_product_ids: authentication_product_ids
                 .or(source.authentication_product_ids),
             is_pre_network_tokenization_enabled: is_pre_network_tokenization_enabled
-                .unwrap_or(source.is_pre_network_tokenization_enabled)
+                .unwrap_or(source.is_pre_network_tokenization_enabled),
         }
     }
 }
