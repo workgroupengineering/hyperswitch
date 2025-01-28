@@ -54,7 +54,7 @@ pub enum RoutableConnectors {
     Aci,
     Adyen,
     Airwallex,
-    // Amazonpay,
+    Amazonpay,
     Authorizedotnet,
     Bankofamerica,
     Billwerk,
@@ -190,7 +190,7 @@ pub enum Connector {
     Aci,
     Adyen,
     Airwallex,
-    // Amazonpay,
+    Amazonpay,
     Authorizedotnet,
     Bambora,
     Bamboraapac,
@@ -342,7 +342,7 @@ impl Connector {
             | Self::Adyen
             | Self::Adyenplatform
             | Self::Airwallex
-            // | Self::Amazonpay
+            | Self::Amazonpay
             | Self::Authorizedotnet
             | Self::Bambora
             | Self::Bamboraapac
@@ -472,6 +472,7 @@ impl From<RoutableConnectors> for Connector {
             RoutableConnectors::Aci => Self::Aci,
             RoutableConnectors::Adyen => Self::Adyen,
             RoutableConnectors::Airwallex => Self::Airwallex,
+            RoutableConnectors::Amazonpay => Self::Amazonpay,
             RoutableConnectors::Authorizedotnet => Self::Authorizedotnet,
             RoutableConnectors::Bankofamerica => Self::Bankofamerica,
             RoutableConnectors::Billwerk => Self::Billwerk,
