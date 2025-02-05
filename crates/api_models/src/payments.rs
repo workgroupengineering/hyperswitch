@@ -8,6 +8,8 @@ use cards::CardNumber;
 use common_enums::ProductType;
 #[cfg(feature = "v2")]
 use common_utils::id_type::GlobalPaymentId;
+#[cfg(feature = "v2")]
+use common_utils::types::ConnectorTransactionId;
 use common_utils::{
     consts::default_payments_list_limit,
     crypto,
@@ -94,6 +96,7 @@ pub struct CustomerDetails {
     pub phone_country_code: Option<String>,
 }
 
+#[cfg(feature = "v1")]
 /// Details of customer attached to this payment
 #[derive(
     Debug, Default, serde::Serialize, serde::Deserialize, Clone, ToSchema, PartialEq, Setter,
@@ -102,6 +105,33 @@ pub struct CustomerDetailsResponse {
     /// The identifier for the customer.
     #[schema(value_type = Option<String>, max_length = 64, min_length = 1, example = "cus_y3oqhf46pyzuxjbcn2giaqnb44")]
     pub id: Option<id_type::CustomerId>,
+
+    /// The customer's name
+    #[schema(max_length = 255, value_type = Option<String>, example = "John Doe")]
+    pub name: Option<Secret<String>>,
+
+    /// The customer's email address
+    #[schema(max_length = 255, value_type = Option<String>, example = "johntest@test.com")]
+    pub email: Option<Email>,
+
+    /// The customer's phone number
+    #[schema(value_type = Option<String>, max_length = 10, example = "9123456789")]
+    pub phone: Option<Secret<String>>,
+
+    /// The country code for the customer's phone number
+    #[schema(max_length = 2, example = "+1")]
+    pub phone_country_code: Option<String>,
+}
+
+#[cfg(feature = "v2")]
+/// Details of customer attached to this payment
+#[derive(
+    Debug, Default, serde::Serialize, serde::Deserialize, Clone, ToSchema, PartialEq, Setter,
+)]
+pub struct CustomerDetailsResponse {
+    /// The identifier for the customer.
+    #[schema(value_type = Option<String>, max_length = 64, min_length = 1, example = "cus_y3oqhf46pyzuxjbcn2giaqnb44")]
+    pub id: Option<id_type::GlobalCustomerId>,
 
     /// The customer's name
     #[schema(max_length = 255, value_type = Option<String>, example = "John Doe")]
@@ -4756,6 +4786,149 @@ pub struct PaymentsResponse {
     pub connector_mandate_id: Option<String>,
 }
 
+#[cfg(feature = "v2")]
+#[derive(Clone, Debug, serde::Serialize, ToSchema)]
+pub struct PaymentsListResponseItem {
+    /// Unique identifier for the payment. This ensures idempotency for multiple payments
+    /// that have been done by a single merchant.
+    #[schema(
+        min_length = 32,
+        max_length = 64,
+        example = "12345_pay_01926c58bc6e77c09e809964e72af8c8",
+        value_type = String,
+    )]
+    pub id: id_type::GlobalPaymentId,
+
+    /// This is an identifier for the merchant account. This is inferred from the API key
+    /// provided during the request
+    #[schema(max_length = 255, example = "merchant_1668273825", value_type = String)]
+    pub merchant_id: id_type::MerchantId,
+
+    /// The business profile that is associated with this payment
+    #[schema(value_type = String)]
+    pub profile_id: id_type::ProfileId,
+
+    /// The identifier for the customer
+    #[schema(
+        min_length = 32,
+        max_length = 64,
+        example = "12345_cus_01926c58bc6e77c09e809964e72af8c8",
+        value_type = Option<String>
+    )]
+    pub customer_id: Option<id_type::GlobalCustomerId>,
+
+    /// Identifier for Payment Method used for the payment
+    #[schema(value_type = Option<String>)]
+    pub payment_method_id: Option<id_type::GlobalPaymentMethodId>,
+
+    /// Status of the payment
+    #[schema(value_type = IntentStatus, example = "failed", default = "requires_confirmation")]
+    pub status: api_enums::IntentStatus,
+
+    /// Amount related information for this payment and attempt
+    pub amount: PaymentAmountDetailsResponse,
+
+    /// Time when the payment was created
+    #[schema(example = "2022-09-10T10:11:12Z")]
+    #[serde(with = "common_utils::custom_serde::iso8601")]
+    pub created: PrimitiveDateTime,
+
+    /// The payment method type for this payment attempt
+    #[schema(value_type = Option<PaymentMethod>, example = "wallet")]
+    pub payment_method_type: Option<api_enums::PaymentMethod>,
+
+    #[schema(value_type = Option<PaymentMethodType>, example = "apple_pay")]
+    pub payment_method_subtype: Option<api_enums::PaymentMethodType>,
+
+    /// The connector used for the payment
+    #[schema(value_type = Option<Connector>, example = "stripe")]
+    pub connector: Option<String>,
+
+    /// Identifier of the connector ( merchant connector account ) which was chosen to make the payment
+    #[schema(value_type = Option<String>)]
+    pub merchant_connector_id: Option<id_type::MerchantConnectorAccountId>,
+
+    /// Details of the customer
+    pub customer: Option<CustomerDetailsResponse>,
+
+    /// Unique identifier for the payment. This ensures idempotency for multiple payments
+    /// that have been done by a single merchant.
+    #[schema(
+        value_type = Option<String>,
+        min_length = 30,
+        max_length = 30,
+        example = "pay_mbabizu24mvu3mela5njyhpit4"
+    )]
+    pub merchant_reference_id: Option<id_type::PaymentReferenceId>,
+
+    /// A unique identifier for a payment provided by the connector
+    #[schema(value_type = Option<String>, example = "993672945374576J")]
+    pub connector_payment_id: Option<String>,
+
+    /// Reference to the capture at connector side
+    pub connector_response_reference_id: Option<String>,
+
+    /// You can specify up to 50 keys, with key names up to 40 characters long and values up to 500 characters long. Metadata is useful for storing additional, structured information on an object.
+    #[schema(value_type = Option<Object>, example = r#"{ "udf1": "some-value", "udf2": "some-value" }"#)]
+    pub metadata: Option<Secret<serde_json::Value>>,
+
+    /// A description of the payment
+    #[schema(example = "It's my first payment request")]
+    pub description: Option<String>,
+
+    /// The transaction authentication can be set to undergo payer authentication. By default, the authentication will be marked as NO_THREE_DS, as the 3DS method helps with more robust payer authentication
+    #[schema(value_type = Option<AuthenticationType>, example = "no_three_ds", default = "three_ds")]
+    pub authentication_type: Option<api_enums::AuthenticationType>,
+
+    /// This is the instruction for capture/ debit the money from the users' card. On the other hand authorization refers to blocking the amount on the users' payment method.
+    #[schema(value_type = Option<CaptureMethod>, example = "automatic")]
+    pub capture_method: Option<api_enums::CaptureMethod>,
+
+    /// Indicates that you intend to make future payments with this Payment’s payment method. Providing this parameter will attach the payment method to the Customer, if present, after the Payment is confirmed and any required actions from the user are complete.
+    #[schema(value_type = Option<FutureUsage>, example = "off_session")]
+    pub setup_future_usage: Option<api_enums::FutureUsage>,
+
+    /// Total number of attempts associated with this payment
+    pub attempt_count: i16,
+
+    /// Error details for the payment if any
+    pub error: Option<ErrorDetails>,
+
+    /// If the payment was cancelled the reason will be provided here
+    pub cancellation_reason: Option<String>,
+
+    /// Information about the product , quantity and amount for connectors. (e.g. Klarna)
+    #[schema(value_type = Option<Vec<OrderDetailsWithAmount>>, example = r#"[{
+        "product_name": "gillete creme",
+        "quantity": 15,
+        "amount" : 900
+    }]"#)]
+    pub order_details: Option<Vec<Secret<OrderDetailsWithAmount>>>,
+
+    /// The URL to redirect after the completion of the operation
+    #[schema(value_type = String, example = "https://hyperswitch.io")]
+    pub return_url: Option<common_utils::types::Url>,
+
+    /// For non-card charges, you can use this value as the complete description that appears on your customers’ statements. Must contain at least one letter, maximum 22 characters.
+    #[schema(value_type = Option<String>, max_length = 255, example = "Hyperswitch Router")]
+    pub statement_descriptor: Option<common_utils::types::StatementDescriptor>,
+
+    // /// Provides information about a card payment that customers see on their statements. Concatenated with the prefix (shortened descriptor) or statement descriptor that’s set on the account to form the complete statement descriptor. Maximum 255 characters for the concatenated descriptor.
+    // #[schema(max_length = 255, example = "Payment for shoes purchase")]
+    // pub statement_descriptor_suffix: Option<String>,
+    /// Allowed Payment Method Types for a given PaymentIntent
+    #[schema(value_type = Option<Vec<PaymentMethodType>>)]
+    pub allowed_payment_method_types: Option<Vec<common_enums::PaymentMethodType>>,
+
+    /// Total number of authorizations happened in an incremental_authorization payment
+    pub authorization_count: Option<i32>,
+
+    /// Date time at which payment was updated
+    #[schema(example = "2022-09-10T10:11:12Z")]
+    #[serde(default, with = "common_utils::custom_serde::iso8601::option")]
+    pub modified_at: Option<PrimitiveDateTime>,
+}
+
 // Serialize is implemented because, this will be serialized in the api events.
 // Usually request types should not have serialize implemented.
 //
@@ -5386,13 +5559,12 @@ pub struct PaymentListConstraints {
     pub created_gte: Option<PrimitiveDateTime>,
 }
 
-#[cfg(feature = "v1")]
 #[derive(Clone, Debug, serde::Serialize, ToSchema)]
 pub struct PaymentListResponse {
     /// The number of payments included in the list
     pub size: usize,
     // The list of payments response objects
-    pub data: Vec<PaymentsResponse>,
+    pub data: Vec<PaymentsListResponseItem>,
 }
 
 #[derive(Setter, Clone, Default, Debug, PartialEq, serde::Serialize, ToSchema)]
@@ -5413,7 +5585,6 @@ pub struct IncrementalAuthorizationResponse {
     pub previously_authorized_amount: MinorUnit,
 }
 
-#[cfg(feature = "v1")]
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct PaymentListResponseV2 {
     /// The number of payments included in the list for given constraints
@@ -5421,9 +5592,10 @@ pub struct PaymentListResponseV2 {
     /// The total number of available payments for given constraints
     pub total_count: i64,
     /// The list of payments response objects
-    pub data: Vec<PaymentsResponse>,
+    pub data: Vec<PaymentsListResponseItem>,
 }
 
+#[cfg(feature = "v1")]
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct PaymentListFilterConstraints {
     /// The identifier for payment
@@ -5460,6 +5632,79 @@ pub struct PaymentListFilterConstraints {
     #[serde(default)]
     pub order: Order,
     /// The List of all the card networks to filter payments list
+    pub card_network: Option<Vec<enums::CardNetwork>>,
+    /// The identifier for merchant order reference id
+    pub merchant_order_reference_id: Option<String>,
+}
+
+#[cfg(feature = "v2")]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct PaymentListFilterConstraints {
+    /// The identifier for payment
+    #[schema(
+        min_length = 32,
+        max_length = 64,
+        example = "12345_pay_01926c58bc6e77c09e809964e72af8c8",
+        value_type = String,
+    )]
+    pub id: Option<id_type::GlobalPaymentId>,
+
+    /// The identifier for business profile
+    #[schema(value_type = Option<String>)]
+    pub profile_id: Option<id_type::ProfileId>,
+
+    /// The identifier for customer
+    #[schema(
+        min_length = 32,
+        max_length = 64,
+        example = "12345_cus_01926c58bc6e77c09e809964e72af8c8",
+        value_type = Option<String>
+    )]
+    pub customer_id: Option<id_type::GlobalCustomerId>,
+    /// The limit on the number of objects. The default limit is 10 and max limit is 20
+    #[serde(default = "default_payments_list_limit")]
+    pub limit: u32,
+    /// The starting point within a list of objects
+    pub offset: Option<u32>,
+    /// The amount to filter payments list
+    pub amount_filter: Option<AmountFilter>,
+    /// The time range for which objects are needed. TimeRange has two fields start_time and end_time from which objects can be filtered as per required scenarios (created_at, time less than, greater than etc).
+    #[serde(flatten)]
+    #[schema(value_type = Option<TimeRange>)]
+    pub time_range: Option<common_utils::types::TimeRange>,
+
+    /// The list of connectors to filter payments list
+    #[schema(value_type = Option<Vec<Connector>>)]
+    pub connector: Option<Vec<api_enums::Connector>>,
+
+    /// The list of currencies to filter payments list
+    #[schema(value_type = Option<Vec<Currency>>)]
+    pub currency: Option<Vec<enums::Currency>>,
+
+    /// The list of payment status to filter payments list
+    #[schema(value_type = Option<Vec<IntentStatus>>)]
+    pub status: Option<Vec<enums::IntentStatus>>,
+
+    /// The list of payment methods to filter payments list
+    #[schema(value_type = Option<Vec<PaymentMethod>>)]
+    pub payment_method: Option<Vec<enums::PaymentMethod>>,
+
+    /// The list of payment method types to filter payments list
+    #[schema(value_type = Option<Vec<PaymentMethodType>>)]
+    pub payment_method_type: Option<Vec<enums::PaymentMethodType>>,
+
+    /// The list of authentication types to filter payments list
+    #[schema(value_type = Option<Vec<AuthenticationType>>)]
+    pub authentication_type: Option<Vec<enums::AuthenticationType>>,
+
+    /// The list of merchant connector ids to filter payments list for selected label
+    #[schema(value_type = Option<Vec<String>>)]
+    pub merchant_connector_id: Option<Vec<id_type::MerchantConnectorAccountId>>,
+    /// The order in which payments list should be sorted
+    #[serde(default)]
+    pub order: Order,
+    /// The List of all the card networks to filter payments list
+    #[schema(value_type = Option<Vec<CardNetwork>>)]
     pub card_network: Option<Vec<enums::CardNetwork>>,
     /// The identifier for merchant order reference id
     pub merchant_order_reference_id: Option<String>,

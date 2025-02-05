@@ -551,6 +551,11 @@ pub struct Payments;
 impl Payments {
     pub fn server(state: AppState) -> Scope {
         let mut route = web::scope("/v2/payments").app_data(web::Data::new(state));
+        route =
+            route
+                .service(web::resource("/ref/{merchant_reference_id}").route(
+                    web::get().to(payments::payment_get_intent_using_merchant_reference_id),
+                ));
         route = route
             .service(
                 web::resource("")
@@ -559,13 +564,10 @@ impl Payments {
             .service(
                 web::resource("/create-intent")
                     .route(web::post().to(payments::payments_create_intent)),
+            )
+            .service(
+                web::resource("/list").route(web::post().to(payments::payments_list_by_filter)),
             );
-
-        route =
-            route
-                .service(web::resource("/ref/{merchant_reference_id}").route(
-                    web::get().to(payments::payment_get_intent_using_merchant_reference_id),
-                ));
 
         route = route.service(
             web::scope("/{payment_id}")

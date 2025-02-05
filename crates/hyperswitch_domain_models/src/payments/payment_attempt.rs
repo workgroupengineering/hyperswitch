@@ -1,4 +1,4 @@
-#[cfg(all(feature = "v1", feature = "olap"))]
+#[cfg(feature = "olap")]
 use api_models::enums::Connector;
 use common_enums as storage_enums;
 #[cfg(feature = "v2")]
@@ -175,7 +175,7 @@ pub trait PaymentAttemptInterface {
         storage_scheme: storage_enums::MerchantStorageScheme,
     ) -> error_stack::Result<PaymentListFilters, errors::StorageError>;
 
-    #[cfg(all(feature = "v1", feature = "olap"))]
+    #[cfg(all(any(feature = "v1", feature = "v2"), feature = "olap"))]
     #[allow(clippy::too_many_arguments)]
     async fn get_total_count_of_filtered_payment_attempts(
         &self,

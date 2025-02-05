@@ -1681,7 +1681,7 @@ impl PaymentAttemptInterface for KafkaStore {
             .await
     }
 
-    #[cfg(feature = "v1")]
+    #[cfg(any(feature = "v1", feature = "v2"))]
     async fn get_total_count_of_filtered_payment_attempts(
         &self,
         merchant_id: &id_type::MerchantId,
@@ -1811,7 +1811,7 @@ impl PaymentIntentInterface for KafkaStore {
             .await
     }
 
-    #[cfg(all(feature = "olap", feature = "v1"))]
+    #[cfg(all(feature = "v1", feature = "olap"))]
     async fn filter_payment_intent_by_constraints(
         &self,
         state: &KeyManagerState,
@@ -1888,6 +1888,31 @@ impl PaymentIntentInterface for KafkaStore {
             )
             .await
     }
+    #[cfg(all(feature = "olap", feature = "v2"))]
+    async fn get_filtered_payment_intents_attempt(
+        &self,
+        state: &KeyManagerState,
+        merchant_id: &id_type::MerchantId,
+        constraints: &hyperswitch_domain_models::payments::payment_intent::PaymentIntentFetchConstraints,
+        key_store: &domain::MerchantKeyStore,
+        storage_scheme: MerchantStorageScheme,
+    ) -> CustomResult<
+        Vec<(
+            hyperswitch_domain_models::payments::PaymentIntent,
+            Option<hyperswitch_domain_models::payments::payment_attempt::PaymentAttempt>,
+        )>,
+        errors::DataStorageError,
+    > {
+        self.diesel_store
+            .get_filtered_payment_intents_attempt(
+                state,
+                merchant_id,
+                constraints,
+                key_store,
+                storage_scheme,
+            )
+            .await
+    }
 
     #[cfg(all(feature = "olap", feature = "v1"))]
     async fn get_filtered_active_attempt_ids_for_total_count(
@@ -1923,6 +1948,22 @@ impl PaymentIntentInterface for KafkaStore {
                 merchant_reference_id,
                 profile_id,
                 merchant_key_store,
+                storage_scheme,
+            )
+            .await
+    }
+
+    #[cfg(all(feature = "olap", feature = "v2"))]
+    async fn get_filtered_active_attempt_ids_for_total_count(
+        &self,
+        merchant_id: &id_type::MerchantId,
+        constraints: &hyperswitch_domain_models::payments::payment_intent::PaymentIntentFetchConstraints,
+        storage_scheme: MerchantStorageScheme,
+    ) -> CustomResult<Vec<Option<String>>, errors::DataStorageError> {
+        self.diesel_store
+            .get_filtered_active_attempt_ids_for_total_count(
+                merchant_id,
+                constraints,
                 storage_scheme,
             )
             .await
