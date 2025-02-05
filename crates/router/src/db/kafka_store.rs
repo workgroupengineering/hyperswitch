@@ -300,10 +300,8 @@ impl CardsInfoInterface for KafkaStore {
         &self,
         card_iin: String,
         data: storage::UpdateCardInfo,
-    ) -> CustomResult<storage::CardInfo, errors::StorageError>{
-        self.diesel_store
-            .update_card_info(card_iin, data)
-            .await
+    ) -> CustomResult<storage::CardInfo, errors::StorageError> {
+        self.diesel_store.update_card_info(card_iin, data).await
     }
 }
 
