@@ -96,6 +96,7 @@ pub struct CustomerDetails {
     pub phone_country_code: Option<String>,
 }
 
+#[cfg(feature = "v1")]
 /// Details of customer attached to this payment
 #[derive(
     Debug, Default, serde::Serialize, serde::Deserialize, Clone, ToSchema, PartialEq, Setter,
@@ -104,6 +105,33 @@ pub struct CustomerDetailsResponse {
     /// The identifier for the customer.
     #[schema(value_type = Option<String>, max_length = 64, min_length = 1, example = "cus_y3oqhf46pyzuxjbcn2giaqnb44")]
     pub id: Option<id_type::CustomerId>,
+
+    /// The customer's name
+    #[schema(max_length = 255, value_type = Option<String>, example = "John Doe")]
+    pub name: Option<Secret<String>>,
+
+    /// The customer's email address
+    #[schema(max_length = 255, value_type = Option<String>, example = "johntest@test.com")]
+    pub email: Option<Email>,
+
+    /// The customer's phone number
+    #[schema(value_type = Option<String>, max_length = 10, example = "9123456789")]
+    pub phone: Option<Secret<String>>,
+
+    /// The country code for the customer's phone number
+    #[schema(max_length = 2, example = "+1")]
+    pub phone_country_code: Option<String>,
+}
+
+#[cfg(feature = "v2")]
+/// Details of customer attached to this payment
+#[derive(
+    Debug, Default, serde::Serialize, serde::Deserialize, Clone, ToSchema, PartialEq, Setter,
+)]
+pub struct CustomerDetailsResponse {
+    /// The identifier for the customer.
+    #[schema(value_type = Option<String>, max_length = 64, min_length = 1, example = "cus_y3oqhf46pyzuxjbcn2giaqnb44")]
+    pub id: Option<id_type::GlobalCustomerId>,
 
     /// The customer's name
     #[schema(max_length = 255, value_type = Option<String>, example = "John Doe")]

@@ -2570,11 +2570,25 @@ impl ForeignFrom<(storage::PaymentIntent, Option<storage::PaymentAttempt>)>
     for api::PaymentsResponse
 {
     fn foreign_from((pi, pa): (storage::PaymentIntent, Option<storage::PaymentAttempt>)) -> Self {
+        let value = match pi.clone().customer_details.unwrap().into_inner().expose().parse_value::<CustomerData>("CustomerData") {
+                    Ok(parsed_data) => Some(
+                        CustomerDetailsResponse {
+                            id: pi.customer_id.clone(),
+                            name: parsed_data.name,
+                            phone: parsed_data.phone,
+                            email: parsed_data.email,
+                            phone_country_code:parsed_data.phone_country_code
+                    }),
+                    Err(e) => {
+                        router_env::logger::error!("Failed to parse 'CustomerDetailsResponse' from payment method data. Error: {e:?}");
+                        None
+                    }
+        };
         Self {
             id: pi.id,
             merchant_id: pi.merchant_id,
             profile_id: pi.profile_id,
-            customer_id: pi.customer_id,
+            customer_id: pi.customer_id.clone(),
             payment_method_id: pa.as_ref().and_then(|p| p.payment_method_id.clone()),
             status: pi.status,
             amount: api_models::payments::PaymentAmountDetailsResponse::foreign_from((
@@ -2586,7 +2600,23 @@ impl ForeignFrom<(storage::PaymentIntent, Option<storage::PaymentAttempt>)>
             payment_method_subtype: pa.as_ref().and_then(|p| p.payment_method_subtype.into()),
             connector: pa.as_ref().and_then(|p| p.connector.clone()),
             merchant_connector_id: pa.as_ref().and_then(|p| p.merchant_connector_id.clone()),
-            customer: None,
+            customer: pi.customer_details.and_then(|customer_details|
+                match customer_details.into_inner().expose().parse_value::<CustomerData>("CustomerData") {
+                    Ok(parsed_data) => Some(
+                        CustomerDetailsResponse {
+                            id: pi.customer_id,
+                            name: parsed_data.name,
+                            phone: parsed_data.phone,
+                            email: parsed_data.email,
+                            phone_country_code:parsed_data.phone_country_code
+                    }),
+                    Err(e) => {
+                        router_env::logger::error!("Failed to parse 'CustomerDetailsResponse' from payment method data. Error: {e:?}");
+                        None
+                    }
+                }
+            
+            ),
             merchant_reference_id: pi.merchant_reference_id,
             connector_payment_id: pa.as_ref().and_then(|p| p.connector_payment_id.clone()),
             connector_response_reference_id: pa
