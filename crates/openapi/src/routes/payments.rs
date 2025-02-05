@@ -19,6 +19,7 @@
 /// You will require the 'API - Key' from the Hyperswitch dashboard to make the first call, and use the 'client secret' returned in this API along with your 'publishable key' to make subsequent API calls from your client.
 ///
 /// This page lists the various combinations in which the Payments - Create API can be used and the details about the various fields in the requests and responses.
+#[cfg(feature = "v1")]
 #[utoipa::path(
     post,
     path = "/payments",
@@ -215,6 +216,7 @@ pub fn payments_create() {}
 /// Payments - Retrieve
 ///
 /// Retrieves a Payment. This API can also be used to get the status of a previously initiated payment or next action for an ongoing payment
+#[cfg(feature = "v1")]
 #[utoipa::path(
     get,
     path = "/payments/{payment_id}",
@@ -235,6 +237,7 @@ pub fn payments_retrieve() {}
 /// Payments - Update
 ///
 /// To update the properties of a *PaymentIntent* object. This may include attaching a payment method, or attaching customer object or metadata fields after the Payment is created
+#[cfg(feature = "v1")]
 #[utoipa::path(
     post,
     path = "/payments/{payment_id}",
@@ -300,6 +303,7 @@ pub fn payments_update() {}
 /// 2. transition to a `requires_customer_action` status with a `next_action` block or
 ///
 /// 3. succeed with either `succeeded` in case of automatic capture or `requires_capture` in case of manual capture
+#[cfg(feature = "v1")]
 #[utoipa::path(
     post,
     path = "/payments/{payment_id}/confirm",
