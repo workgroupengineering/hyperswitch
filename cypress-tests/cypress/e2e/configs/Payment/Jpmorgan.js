@@ -21,6 +21,22 @@ export const connectorDetails = {
         },
       },
     },
+    PaymentConfirmWithShippingCost: {
+      Request: {
+        payment_method: "card",
+        payment_method_data: {
+          card: successfulNo3DSCardDetails,
+        },
+        customer_acceptance: null,
+        setup_future_usage: "on_session",
+      },
+      Response: {
+        status: 200,
+        body: {
+          status: "succeeded",
+        },
+      },
+    },
     "3DSManualCapture": {
       Request: {
         payment_method: "card",
@@ -42,7 +58,6 @@ export const connectorDetails = {
         },
       },
     },
-
     "3DSAutoCapture": {
       Request: {
         payment_method: "card",
@@ -218,6 +233,21 @@ export const connectorDetails = {
           type: "invalid_request",
           message: "Refund does not exist in our records.",
           code: "HE_02",
+        },
+      },
+    },
+    ZeroAuthMandate: {
+      Request: {
+        payment_method: "card",
+        payment_method_data: {
+          card: successfulNo3DSCardDetails,
+        },
+        currency: "USD",
+      },
+      Response: {
+        status: 200,
+        body: {
+          status: "processing",
         },
       },
     },
