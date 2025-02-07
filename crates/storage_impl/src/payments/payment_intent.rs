@@ -164,6 +164,27 @@ impl<T: DatabaseStore> PaymentIntentInterface for KVRouterStore<T> {
         }
     }
 
+    #[cfg(all(feature = "v2", feature = "olap"))]
+    #[instrument(skip_all)]
+    async fn get_filtered_payment_intents_attempt(
+        &self,
+        state: &KeyManagerState,
+        merchant_id: &common_utils::id_type::MerchantId,
+        constraints: &PaymentIntentFetchConstraints,
+        merchant_key_store: &MerchantKeyStore,
+        storage_scheme: MerchantStorageScheme,
+    ) -> error_stack::Result<Vec<(PaymentIntent, Option<PaymentAttempt>)>, StorageError> {
+        self.router_store
+            .get_filtered_payment_intents_attempt(
+                state,
+                merchant_id,
+                constraints,
+                merchant_key_store,
+                storage_scheme,
+            )
+            .await
+    }
+
     #[cfg(feature = "v1")]
     #[instrument(skip_all)]
     async fn update_payment_intent(
@@ -1136,6 +1157,229 @@ impl<T: DatabaseStore> PaymentIntentInterface for crate::RouterStore<T> {
                     })
                 }))
                 .map(|join_result| join_result.change_context(StorageError::DecryptionError))
+            })
+            .map_err(|er| {
+                StorageError::DatabaseError(
+                    error_stack::report!(diesel_models::errors::DatabaseError::from(er))
+                        .attach_printable("Error filtering payment records"),
+                )
+            })?
+            .await
+    }
+
+    #[cfg(all(feature = "v2", feature = "olap"))]
+    #[instrument(skip_all)]
+    async fn get_filtered_payment_intents_attempt(
+        &self,
+        state: &KeyManagerState,
+        merchant_id: &common_utils::id_type::MerchantId,
+        constraints: &PaymentIntentFetchConstraints,
+        merchant_key_store: &MerchantKeyStore,
+        storage_scheme: MerchantStorageScheme,
+    ) -> error_stack::Result<Vec<(PaymentIntent, Option<PaymentAttempt>)>, StorageError> {
+        use diesel::NullableExpressionMethods as _;
+        use futures::{future::try_join_all, FutureExt};
+
+        use crate::DataModelExt;
+
+        let conn = connection::pg_connection_read(self).await.switch()?;
+        let conn = async_bb8_diesel::Connection::as_async_conn(&conn);
+        let mut query = DieselPaymentIntent::table()
+            .filter(pi_dsl::merchant_id.eq(merchant_id.to_owned()))
+            .left_join(
+                payment_attempt_schema::table
+                    .on(pi_dsl::active_attempt_id.eq(pa_dsl::id.nullable())),
+            )
+            .into_boxed(); // Filtering on merchant_id for payment_attempt is not required for v2
+
+        query = match constraints {
+            PaymentIntentFetchConstraints::Single { payment_intent_id } => {
+                query.filter(pi_dsl::id.eq(payment_intent_id.to_owned()))
+            }
+            PaymentIntentFetchConstraints::List(params) => {
+                query = match params.order {
+                    Order {
+                        on: SortOn::Amount,
+                        by: SortBy::Asc,
+                    } => query.order(pi_dsl::amount.asc()),
+                    Order {
+                        on: SortOn::Amount,
+                        by: SortBy::Desc,
+                    } => query.order(pi_dsl::amount.desc()),
+                    Order {
+                        on: SortOn::Created,
+                        by: SortBy::Asc,
+                    } => query.order(pi_dsl::created_at.asc()),
+                    Order {
+                        on: SortOn::Created,
+                        by: SortBy::Desc,
+                    } => query.order(pi_dsl::created_at.desc()),
+                };
+
+                if let Some(limit) = params.limit {
+                    query = query.limit(limit.into());
+                }
+
+                if let Some(customer_id) = &params.customer_id {
+                    query = query.filter(pi_dsl::customer_id.eq(customer_id.clone()));
+                }
+
+                if let Some(merchant_order_reference_id) = &params.merchant_order_reference_id {
+                    query = query.filter(
+                        pi_dsl::merchant_reference_id.eq(merchant_order_reference_id.clone()),
+                    )
+                }
+
+                if let Some(profile_id) = &params.profile_id {
+                    query = query.filter(pi_dsl::profile_id.eq_any(profile_id.clone()));
+                }
+
+                query = match (params.starting_at, &params.starting_after_id) {
+                    (Some(starting_at), _) => query.filter(pi_dsl::created_at.ge(starting_at)),
+                    (None, Some(starting_after_id)) => {
+                        // TODO: Fetch partial columns for this query since we only need some columns
+                        let starting_at = self
+                            .find_payment_intent_by_id(
+                                state,
+                                starting_after_id,
+                                merchant_key_store,
+                                storage_scheme,
+                            )
+                            .await?
+                            .created_at;
+                        query.filter(pi_dsl::created_at.ge(starting_at))
+                    }
+                    (None, None) => query,
+                };
+
+                query = match (params.ending_at, &params.ending_before_id) {
+                    (Some(ending_at), _) => query.filter(pi_dsl::created_at.le(ending_at)),
+                    (None, Some(ending_before_id)) => {
+                        // TODO: Fetch partial columns for this query since we only need some columns
+                        let ending_at = self
+                            .find_payment_intent_by_id(
+                                state,
+                                ending_before_id,
+                                merchant_key_store,
+                                storage_scheme,
+                            )
+                            .await?
+                            .created_at;
+                        query.filter(pi_dsl::created_at.le(ending_at))
+                    }
+                    (None, None) => query,
+                };
+
+                query = query.offset(params.offset.into());
+
+                query = match params.amount_filter {
+                    Some(AmountFilter {
+                        start_amount: Some(start),
+                        end_amount: Some(end),
+                    }) => query.filter(pi_dsl::amount.between(start, end)),
+                    Some(AmountFilter {
+                        start_amount: Some(start),
+                        end_amount: None,
+                    }) => query.filter(pi_dsl::amount.ge(start)),
+                    Some(AmountFilter {
+                        start_amount: None,
+                        end_amount: Some(end),
+                    }) => query.filter(pi_dsl::amount.le(end)),
+                    _ => query,
+                };
+
+                query = match &params.currency {
+                    Some(currency) => query.filter(pi_dsl::currency.eq_any(currency.clone())),
+                    None => query,
+                };
+
+                let connectors = params
+                    .connector
+                    .as_ref()
+                    .map(|c| c.iter().map(|c| c.to_string()).collect::<Vec<String>>());
+
+                query = match connectors {
+                    Some(connectors) => query.filter(pa_dsl::connector.eq_any(connectors)),
+                    None => query,
+                };
+
+                query = match &params.status {
+                    Some(status) => query.filter(pi_dsl::status.eq_any(status.clone())),
+                    None => query,
+                };
+
+                query = match &params.payment_method {
+                    Some(payment_method) => {
+                        query.filter(pa_dsl::payment_method_type_v2.eq_any(payment_method.clone()))
+                    }
+                    None => query,
+                };
+
+                query = match &params.payment_method_type {
+                    Some(payment_method_type) => query
+                        .filter(pa_dsl::payment_method_subtype.eq_any(payment_method_type.clone())),
+                    None => query,
+                };
+
+                query = match &params.authentication_type {
+                    Some(authentication_type) => query
+                        .filter(pa_dsl::authentication_type.eq_any(authentication_type.clone())),
+                    None => query,
+                };
+
+                query = match &params.merchant_connector_id {
+                    Some(merchant_connector_id) => query.filter(
+                        pa_dsl::merchant_connector_id.eq_any(merchant_connector_id.clone()),
+                    ),
+                    None => query,
+                };
+
+                if let Some(card_network) = &params.card_network {
+                    query = query.filter(pa_dsl::card_network.eq_any(card_network.clone()));
+                }
+                query
+            }
+        };
+
+        logger::debug!(filter = %diesel::debug_query::<diesel::pg::Pg,_>(&query).to_string());
+
+        query
+            .get_results_async::<(
+                DieselPaymentIntent,
+                Option<diesel_models::payment_attempt::PaymentAttempt>,
+            )>(conn)
+            .await
+            .map(|results| {
+                try_join_all(results.into_iter().map(|(pi, pa)| async {
+                    let payment_intent =  PaymentIntent::convert_back(
+                        state,
+                        pi,
+                        merchant_key_store.key.get_inner(),
+                        merchant_id.to_owned().into(),
+                    ).await;
+
+                    let payment_attempt = match pa {
+                        None => None,
+                        Some(val) => PaymentAttempt::convert_back(
+                                        state,
+                                        val,
+                                        merchant_key_store.key.get_inner(),
+                                        merchant_id.to_owned().into(),
+                                    ).await.ok()
+
+                    };
+
+                    // let payment_attempt = pa.async_map(|pa|  PaymentAttempt::convert_back(
+                    //                     state,
+                    //                     pa,
+                    //                     merchant_key_store.key.get_inner(),
+                    //                     merchant_id.to_owned().into(),
+                    //                 )).await;
+
+                    Ok((payment_intent.unwrap(), payment_attempt))
+                                   
+                   
+                }))
             })
             .map_err(|er| {
                 StorageError::DatabaseError(

@@ -111,6 +111,22 @@ pub trait PaymentIntentInterface {
         storage_scheme: common_enums::MerchantStorageScheme,
     ) -> error_stack::Result<Vec<(PaymentIntent, PaymentAttempt)>, errors::StorageError>;
 
+    #[cfg(all(feature = "v2", feature = "olap"))]
+    async fn get_filtered_payment_intents_attempt(
+        &self,
+        state: &KeyManagerState,
+        merchant_id: &id_type::MerchantId,
+        constraints: &PaymentIntentFetchConstraints,
+        merchant_key_store: &MerchantKeyStore,
+        storage_scheme: common_enums::MerchantStorageScheme,
+    ) -> error_stack::Result<
+        Vec<(
+            PaymentIntent,
+            Option<super::payment_attempt::PaymentAttempt>,
+        )>,
+        errors::StorageError,
+    >;
+
     #[cfg(all(feature = "v1", feature = "olap"))]
     async fn get_filtered_active_attempt_ids_for_total_count(
         &self,

@@ -28,6 +28,24 @@ impl PaymentIntentInterface for MockDb {
         Err(StorageError::MockDbError)?
     }
 
+    #[cfg(all(feature = "v2", feature = "olap"))]
+    async fn get_filtered_payment_intents_attempt(
+        &self,
+        state: &KeyManagerState,
+        merchant_id: &common_utils::id_type::MerchantId,
+        constraints: &hyperswitch_domain_models::payments::payment_intent::PaymentIntentFetchConstraints,
+        merchant_key_store: &MerchantKeyStore,
+        storage_scheme: storage_enums::MerchantStorageScheme,
+    ) -> error_stack::Result<
+        Vec<(
+            PaymentIntent,
+            Option<hyperswitch_domain_models::payments::payment_attempt::PaymentAttempt>,
+        )>,
+        StorageError,
+    > {
+        Err(StorageError::MockDbError)?
+    }
+
     #[cfg(all(feature = "v1", feature = "olap"))]
     async fn filter_payment_intents_by_time_range_constraints(
         &self,

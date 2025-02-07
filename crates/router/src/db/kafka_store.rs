@@ -1888,6 +1888,31 @@ impl PaymentIntentInterface for KafkaStore {
             )
             .await
     }
+    #[cfg(all(feature = "olap", feature = "v2"))]
+    async fn get_filtered_payment_intents_attempt(
+        &self,
+        state: &KeyManagerState,
+        merchant_id: &id_type::MerchantId,
+        constraints: &hyperswitch_domain_models::payments::payment_intent::PaymentIntentFetchConstraints,
+        key_store: &domain::MerchantKeyStore,
+        storage_scheme: MerchantStorageScheme,
+    ) -> CustomResult<
+        Vec<(
+            hyperswitch_domain_models::payments::PaymentIntent,
+            Option<hyperswitch_domain_models::payments::payment_attempt::PaymentAttempt>,
+        )>,
+        errors::DataStorageError,
+    > {
+        self.diesel_store
+            .get_filtered_payment_intents_attempt(
+                state,
+                merchant_id,
+                constraints,
+                key_store,
+                storage_scheme,
+            )
+            .await
+    }
 
     #[cfg(all(feature = "olap", feature = "v1"))]
     async fn get_filtered_active_attempt_ids_for_total_count(

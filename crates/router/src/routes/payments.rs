@@ -1235,9 +1235,7 @@ pub async fn payments_list_by_filter(
                 req,
             )
         },
-        &auth::JWTAuth {
-            permission: Permission::MerchantPaymentRead,
-        },
+        &auth::ApiKeyAuth,
         api_locking::LockAction::NotApplicable,
     ))
     .await
