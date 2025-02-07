@@ -6,6 +6,14 @@ const successfulNo3DSCardDetails = {
   card_cvc: "123",
 };
 
+const failedNo3DSCardDetails = {
+  card_number: "5111005111051128",
+  card_exp_month: "01",
+  card_exp_year: "25",
+  card_holder_name: "joseph Doe",
+  card_cvc: "123",
+};
+
 export const connectorDetails = {
   card_pm: {
     PaymentIntent: {
@@ -262,6 +270,22 @@ export const connectorDetails = {
         body: {
           status: "requires_payment_method",
           setup_future_usage: "off_session",
+        },
+      },
+    },
+    No3DSFailPayment: {
+      Request: {
+        payment_method: "card",
+        payment_method_data: {
+          card: failedNo3DSCardDetails,
+        },
+        customer_acceptance: null,
+        setup_future_usage: "on_session",
+      },
+      Response: {
+        status: 400,
+        body: {
+          error_message: "Card_Expired",
         },
       },
     },
