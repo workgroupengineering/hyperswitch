@@ -1681,7 +1681,7 @@ impl PaymentAttemptInterface for KafkaStore {
             .await
     }
 
-    #[cfg(feature = "v1")]
+    #[cfg(any(feature = "v1", feature = "v2"))]
     async fn get_total_count_of_filtered_payment_attempts(
         &self,
         merchant_id: &id_type::MerchantId,
@@ -1914,7 +1914,7 @@ impl PaymentIntentInterface for KafkaStore {
             .await
     }
 
-    #[cfg(all(feature = "olap", feature = "v1"))]
+    #[cfg(all(feature = "olap", any(feature = "v1", feature = "v2")))]
     async fn get_filtered_active_attempt_ids_for_total_count(
         &self,
         merchant_id: &id_type::MerchantId,

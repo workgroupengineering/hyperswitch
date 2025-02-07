@@ -42,7 +42,7 @@ impl PaymentAttemptInterface for MockDb {
         Err(StorageError::MockDbError)?
     }
 
-    #[cfg(all(feature = "v1", feature = "olap"))]
+    #[cfg(all(any(feature = "v1", feature = "v2"), feature = "olap"))]
     async fn get_total_count_of_filtered_payment_attempts(
         &self,
         _merchant_id: &common_utils::id_type::MerchantId,

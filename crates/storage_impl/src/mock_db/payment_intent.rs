@@ -70,7 +70,7 @@ impl PaymentIntentInterface for MockDb {
         Err(StorageError::MockDbError)?
     }
 
-    #[cfg(all(feature = "v1", feature = "olap"))]
+    #[cfg(all(any(feature = "v1", feature = "v2"), feature = "olap"))]
     async fn get_filtered_active_attempt_ids_for_total_count(
         &self,
         _merchant_id: &common_utils::id_type::MerchantId,
