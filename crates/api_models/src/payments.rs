@@ -5559,6 +5559,16 @@ pub struct PaymentListConstraints {
     pub created_gte: Option<PrimitiveDateTime>,
 }
 
+#[cfg(feature = "v1")]
+#[derive(Clone, Debug, serde::Serialize, ToSchema)]
+pub struct PaymentListResponse {
+    /// The number of payments included in the list
+    pub size: usize,
+    // The list of payments response objects
+    pub data: Vec<PaymentsResponse>,
+}
+
+#[cfg(feature = "v2")]
 #[derive(Clone, Debug, serde::Serialize, ToSchema)]
 pub struct PaymentListResponse {
     /// The number of payments included in the list
@@ -5585,6 +5595,18 @@ pub struct IncrementalAuthorizationResponse {
     pub previously_authorized_amount: MinorUnit,
 }
 
+#[cfg(feature = "v1")]
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct PaymentListResponseV2 {
+    /// The number of payments included in the list for given constraints
+    pub count: usize,
+    /// The total number of available payments for given constraints
+    pub total_count: i64,
+    /// The list of payments response objects
+    pub data: Vec<PaymentsResponse>,
+}
+
+#[cfg(feature = "v2")]
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct PaymentListResponseV2 {
     /// The number of payments included in the list for given constraints

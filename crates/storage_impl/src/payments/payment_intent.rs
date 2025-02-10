@@ -1502,6 +1502,5 @@ impl<T: DatabaseStore> PaymentIntentInterface for crate::RouterStore<T> {
             )
             .into()
         })
-        // .map(|vec| vec.into_iter().filter_map(|opt| opt).collect())
     }
 }

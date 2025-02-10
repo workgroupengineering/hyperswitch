@@ -10,7 +10,8 @@ use super::{
     not(feature = "payment_methods_v2")
 ))]
 use crate::payment_methods::CustomerPaymentMethodsListResponse;
-use crate::payments::{PaymentListResponse, PaymentListResponseV2};
+#[cfg(feature = "v1")]
+use crate::payments::PaymentListConstraints;
 #[cfg(all(feature = "v2", feature = "payment_methods_v2"))]
 use crate::{events, payment_methods::CustomerPaymentMethodsListResponse};
 use crate::{
@@ -23,14 +24,15 @@ use crate::{
     },
     payments::{
         self, ExtendedCardInfoResponse, PaymentIdType, PaymentListFilterConstraints,
-        PaymentListFilters, PaymentListFiltersV2, PaymentsAggregateResponse,
-        PaymentsApproveRequest, PaymentsCancelRequest, PaymentsCaptureRequest,
-        PaymentsCompleteAuthorizeRequest, PaymentsDynamicTaxCalculationRequest,
-        PaymentsDynamicTaxCalculationResponse, PaymentsExternalAuthenticationRequest,
-        PaymentsExternalAuthenticationResponse, PaymentsIncrementalAuthorizationRequest,
-        PaymentsManualUpdateRequest, PaymentsManualUpdateResponse,
-        PaymentsPostSessionTokensRequest, PaymentsPostSessionTokensResponse, PaymentsRejectRequest,
-        PaymentsResponse, PaymentsRetrieveRequest, PaymentsSessionResponse, PaymentsStartRequest,
+        PaymentListFilters, PaymentListFiltersV2, PaymentListResponse, PaymentListResponseV2,
+        PaymentsAggregateResponse, PaymentsApproveRequest, PaymentsCancelRequest,
+        PaymentsCaptureRequest, PaymentsCompleteAuthorizeRequest,
+        PaymentsDynamicTaxCalculationRequest, PaymentsDynamicTaxCalculationResponse,
+        PaymentsExternalAuthenticationRequest, PaymentsExternalAuthenticationResponse,
+        PaymentsIncrementalAuthorizationRequest, PaymentsManualUpdateRequest,
+        PaymentsManualUpdateResponse, PaymentsPostSessionTokensRequest,
+        PaymentsPostSessionTokensResponse, PaymentsRejectRequest, PaymentsResponse,
+        PaymentsRetrieveRequest, PaymentsSessionResponse, PaymentsStartRequest,
         RedirectionResponse,
     },
 };
@@ -360,6 +362,13 @@ impl ApiEventMetric for PaymentListFilters {
     }
 }
 impl ApiEventMetric for PaymentListFiltersV2 {
+    fn get_api_event_type(&self) -> Option<ApiEventsType> {
+        Some(ApiEventsType::ResourceListAPI)
+    }
+}
+
+#[cfg(feature = "v1")]
+impl ApiEventMetric for PaymentListConstraints {
     fn get_api_event_type(&self) -> Option<ApiEventsType> {
         Some(ApiEventsType::ResourceListAPI)
     }
